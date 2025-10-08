@@ -1,45 +1,31 @@
----
-# yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
-# image will be published to ghcr.io/<user>/<name>
-name: t480-aurora
-# description will be included in the image's metadata
-description: This is my personal OS image.
+# This is the "Ingredients List" for your custom Aurora KDE image.
+name: aurora-t480-image
+description: A custom Aurora image for my Lenovo T480 with hardware fixes.
 
-# the base image to build on top of (FROM) and the version tag to use
-base-image: ghcr.io/ublue-os/silverblue-main
-image-version: 42 # latest is also supported if you want new updates ASAP
+# This is the most important line: it starts with the official Aurora KDE image.
+base: ghcr.io/aurora-os/aurora-kde
+from: latest
 
-# module configuration, executed in order
-# you can include multiple instances of the same module
 modules:
-  - type: files
-    files:
-      - source: system
-        destination: / # copies files/system/* (* means everything inside it) into your image's root folder /
-
-  - type: dnf
+  - type: rpm-ostree
     repos:
-      copr:
-        - atim/starship
+      # Add the RPM Fusion repositories for multimedia codecs.
+      - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+      - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
     install:
-      packages:
-        - micro
-        - starship
-    remove:
-      packages:
-        # example: removing firefox (in favor of the flatpak)
-        # "firefox" is the main package, "firefox-langpacks" is a dependency
-        - firefox
-        - firefox-langpacks # also remove firefox dependency (not required for all packages, this is a special case)
+      # -- Lenovo T480 Specific Fixes --
+      - tlp             # Advanced power management
+      - tlp-rdw         # TLP's radio device wizard
+      - throttled       # To prevent CPU thermal throttling
+      - zcfan           # Advanced fan control daemon
+      - python3-validity # For the fingerprint reader
 
-  - type: default-flatpaks
-    configurations:
-      - notify: true # Send notification after install/uninstall is finished (true/false)
-        scope: system
-        # If no repo information is specified, Flathub will be used by default
-        install: # system flatpaks we want all users to have and not remove
-          - org.mozilla.firefox
-          - org.gnome.Loupe
-      - scope: user # Also add Flathub user repo, but no user packages
+      # -- Multimedia Codecs --
+      - gstreamer1-plugins-bad-free-extras
+      - gstreamer1-plugins-ugly
+      - gstreamer1-vaapi
+      - intel-media-driver # Video acceleration for Intel GPUs
 
-  - type: signing # this sets up the proper policy & signing files for signed images to work fully
+      # -- Useful Utilities --
+      - distrobox       # Run other Linux distributions in containers
